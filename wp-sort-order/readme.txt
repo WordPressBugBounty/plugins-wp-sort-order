@@ -2,8 +2,8 @@
 Contributors: fahadmahmood, invoicepress
 Tags: taxonomy order, user order, plugins order, post order
 Requires at least: 3.5.0
-Tested up to: 6.6
-Stable tag: 1.3.4
+Tested up to: 6.8
+Stable tag: 1.3.5
 Requires PHP: 7.0
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
