@@ -227,11 +227,17 @@
 			
 			if ( !empty( $objects ) ) {
 				foreach( $objects as $object) {
-					$result = $wpdb->get_results( "
+					/*$result = $wpdb->get_results( "
 						SELECT count(*) as cnt, max(menu_order) as max, min(menu_order) as min 
 						FROM $wpdb->posts 
 						WHERE post_type = '".$object."' AND post_status IN ('publish', 'pending', 'draft', 'private', 'future')
-					" );
+					" );*/
+					$result = $wpdb->get_results( $wpdb->prepare(
+						"SELECT count(*) as cnt, max(menu_order) as max, min(menu_order) as min 
+						FROM $wpdb->posts 
+						WHERE post_type = %s AND post_status IN ('publish', 'pending', 'draft', 'private', 'future')",
+						$object
+					) );
 					if ( $result[0]->cnt == 0 || $result[0]->cnt == $result[0]->max ) continue;
 					
 					$results = $wpdb->get_results( "
@@ -250,12 +256,19 @@
 			
 			if ( !empty( $tags ) ) {
 				foreach( $tags as $taxonomy ) {
-					$result = $wpdb->get_results( "
+					/*$result = $wpdb->get_results( "
 						SELECT count(*) as cnt, max(term_order) as max, min(term_order) as min 
 						FROM $wpdb->terms AS terms 
 						INNER JOIN $wpdb->term_taxonomy AS term_taxonomy ON ( terms.term_id = term_taxonomy.term_id ) 
 						WHERE term_taxonomy.taxonomy = '".$taxonomy."'
-					" );
+					" );*/
+					$result = $wpdb->get_results( $wpdb->prepare(
+						"SELECT count(*) as cnt, max(term_order) as max, min(term_order) as min 
+						FROM $wpdb->terms AS terms 
+						INNER JOIN $wpdb->term_taxonomy AS term_taxonomy ON ( terms.term_id = term_taxonomy.term_id ) 
+						WHERE term_taxonomy.taxonomy = %s",
+						$taxonomy
+					) );
 					//pree($taxonomy);
 					//pree($result);//exit;
 					$terms[] = $taxonomy;
@@ -319,7 +332,7 @@
 							//$objects = get_objects_in_term($item, $taxonomy);
 							//pree($objects);
 							
-							$squery = "
+							/*$squery = "
 								SELECT count(*) as cnt, max(um.meta_value) as max, min(um.meta_value) as min 
 								FROM
 									$wpdb->term_relationships AS r,
@@ -333,7 +346,25 @@
 									(um.user_id=r.object_id
 									AND
 									um.meta_key=CONCAT('user_order_', r.term_taxonomy_id))
-							";
+							";*/
+							
+							$squery = $wpdb->prepare(
+								"SELECT count(*) as cnt, max(um.meta_value) as max, min(um.meta_value) as min 
+								FROM
+									$wpdb->term_relationships AS r,
+									$wpdb->users AS u,
+									$wpdb->usermeta AS um								
+								WHERE
+									r.term_taxonomy_id=%d
+									AND
+									u.ID=r.object_id
+									AND
+									(um.user_id=r.object_id
+									AND
+									um.meta_key=CONCAT('user_order_', r.term_taxonomy_id))",
+								$item
+							);
+							$stats = $wpdb->get_results( $squery );
 							//if($item==26)
 							//pree($squery);
 							
@@ -344,9 +375,15 @@
 							
 							$user_count1 = $wpdb->get_var( $cquery );
 							
-							$cquery = "SELECT COUNT(*) FROM $wpdb->usermeta um WHERE um.meta_key=CONCAT('user_order_', $item)";
+							/*$cquery = "SELECT COUNT(*) FROM $wpdb->usermeta um WHERE um.meta_key=CONCAT('user_order_', $item)";							
 
-							$user_count2 = $wpdb->get_var( $cquery );							
+							$user_count2 = $wpdb->get_var( $cquery );*/
+							
+							$cquery = $wpdb->prepare(
+								"SELECT COUNT(*) FROM $wpdb->usermeta um WHERE um.meta_key = %s",
+								'user_order_' . $item
+							);
+							$user_count2 = $wpdb->get_var( $cquery );
 							
 							/*if($item==26){
 								pree($user_count1);
@@ -359,7 +396,7 @@
 							//pree($user_count.' > '.$stats[0]->cnt);
 							//pree('<br />');
 							if(($user_count1!=$user_count2)){ //|| $user_count1!=$stats[0]->cnt){
-								$dquery = "
+								/*$dquery = "
 									SELECT 
 										um.umeta_id,
 										um.user_id
@@ -368,7 +405,14 @@
 									WHERE										
 										um.meta_key=CONCAT('user_order_', $item)
 										
-								";
+								";*/
+								$dquery = $wpdb->prepare(
+									"SELECT um.umeta_id, um.user_id
+									FROM $wpdb->usermeta um
+									WHERE um.meta_key = %s",
+									'user_order_' . $item
+								);
+								$dres = $wpdb->get_results($dquery);
 								//if($item==26)
 								//pree($dquery);
 								
@@ -460,16 +504,20 @@
 		function update_menu_order()
 		{
 			global $wpdb;
+				
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_die( esc_html__( 'Unauthorized.', 'wpso-sort-order' ) );
+			}
 			
 			if (
                 ! isset( $_POST['wpso_nonce'] )
                 || ! wp_verify_nonce( sanitize_text_field( wp_unslash ($_POST['wpso_nonce'])), 'wpso_nonce_ensured' )
             ) {
 
-                print_r(__('Sorry! Your nonce did not verified.', 'wpso-sort-order'));
+                wp_die(esc_html__('Sorry! Your nonce did not verify.', 'wpso-sort-order'));
 
             }else{
-	
+
 				parse_str( $_POST['order'], $data );
 				
 				if ( !is_array( $data ) ) return false;
@@ -503,7 +551,7 @@
 				
 			}
 			
-			exit;
+			wp_die();
 		}
 		
 		function wpso_increment_order($arr=array(), $order=0){
@@ -520,14 +568,20 @@
 		{
 			global $wpdb;
 			
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_die( esc_html__( 'Unauthorized.', 'wpso-sort-order' ) );
+			}
+			
 			if (
                 ! isset( $_POST['wpso_nonce'] )
                 || ! wp_verify_nonce( sanitize_text_field( wp_unslash ($_POST['wpso_nonce'])), 'wpso_nonce_ensured' )
             ) {
 
-                print_r(__('Sorry! Your nonce did not verified.', 'wpso-sort-order'));
+                wp_die(esc_html__('Sorry! Your nonce did not verify.', 'wpso-sort-order'));
 
             }else{
+				
+				
 			
 				parse_str( $_POST['order'], $data );
 				
@@ -564,30 +618,24 @@
 			
 			}
 			
-			exit;
+			wp_die();
 		}
 		
 		function current_tax($params){
-			
-			$valid_tax = 0;//array();
+    
+			$valid_tax = 0;
 			if(!empty($params)){
 				$tags = $this->get_wpso_options_tags();
-				//pree($tags);
-				//pree($params);
 				foreach($params as $tax=>$term){
-					
-	
-					
 					if(in_array($tax, $tags)){
-						//pree($tax);
-						//pree($term);					
-						$obj = get_term_by( 'slug', $term, $tax ); 
-						//pree($obj);
-						$valid_tax = $obj->term_id;
+						$obj = get_term_by( 'slug', $term, $tax );
+						if ( is_object( $obj ) && isset( $obj->term_id ) ) {
+							$valid_tax = $obj->term_id;
+							break;
+						}
 					}
 				}
-				//pree($tags);
-			}	
+			}    
 			return $valid_tax;
 		}
 	
@@ -595,12 +643,16 @@
 		{
 			global $wpdb;
 			
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_die( esc_html__( 'Unauthorized.', 'wpso-sort-order' ) );
+			}
+			
 			if (
                 ! isset( $_POST['wpso_nonce'] )
                 || ! wp_verify_nonce( sanitize_text_field( wp_unslash ($_POST['wpso_nonce'])), 'wpso_nonce_ensured' )
             ) {
 
-                print_r(__('Sorry! Your nonce did not verified.', 'wpso-sort-order'));
+                wp_die(esc_html__('Sorry! Your nonce did not verify.', 'wpso-sort-order'));
 
             }else{
 			
@@ -646,7 +698,7 @@
 				}
 				
 			}
-			exit;
+			wp_die();
 			
 		}	
 		
@@ -654,12 +706,16 @@
 		{
 			global $wpdb;
 			
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_die( esc_html__( 'Unauthorized.', 'wpso-sort-order' ) );
+			}
+			
 			if (
                 ! isset( $_POST['wpso_nonce'] )
                 || ! wp_verify_nonce( sanitize_text_field( wp_unslash ($_POST['wpso_nonce'])), 'wpso_nonce_ensured' )
             ) {
 
-                print_r(__('Sorry! Your nonce did not verified.', 'wpso-sort-order'));
+                wp_die(esc_html__('Sorry! Your nonce did not verify.', 'wpso-sort-order'));
 
             }else{
 			
@@ -680,7 +736,7 @@
 				
 			}
 			
-			exit;
+			wp_die();
 			
 		}			
 		function update_options()
@@ -764,6 +820,9 @@
             global $wpdb, $premium_tags_list;
 
             if ( !isset( $_POST['wpso_premium_submit'] ) ) return false;
+			
+			check_admin_referer( 'nonce_wpso' );
+			
             $tags_old = $this->get_wpso_options_tags();
             $input_options = get_option('wpso_options', array());
             $tags_premium = isset( $_POST['tags'] ) ? sanitize_wpso_data($_POST['tags']) : array();
@@ -783,7 +842,7 @@
 
 
 
-            check_admin_referer( 'nonce_wpso' );
+            
 
             $input_options['tags'] = $new_tags;
 
@@ -1035,6 +1094,10 @@
 		if (defined('DOING_AJAX') && DOING_AJAX)
 		return;
 		
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+		
 		$wpso_options = get_option( 'wpso_options' );
 		$wpso_objects = isset( $wpso_options['objects'] ) ? $wpso_options['objects'] : array();
 		$wpso_objects = is_array($wpso_objects)?$wpso_objects:array();
@@ -1042,13 +1105,21 @@
 		global $wpdb;
 		
 		if(is_object($post) && !$post->menu_order && in_array( $post->post_type, $wpso_objects )){
-			$sql = 'SELECT MAX(menu_order) FROM '.$wpdb->posts.'
+			
+			/*$sql = 'SELECT MAX(menu_order) FROM '.$wpdb->posts.'
 					WHERE post_type = "'.$post->post_type.'" ';
 			//$max = $wpdb->get_var($sql);
 			
 			$sql = 'SELECT MIN(menu_order) FROM '.$wpdb->posts.'
 					WHERE post_type = "'.$post->post_type.'" ';		
-			$min = (int)$wpdb->get_var($sql); //30/10/2024
+			$min = (int)$wpdb->get_var($sql); //30/10/2024*/
+			
+			$sql = $wpdb->prepare(
+				'SELECT MIN(menu_order) FROM '.$wpdb->posts.'
+				WHERE post_type = %s',
+				$post->post_type
+			);
+			$min = (int)$wpdb->get_var($sql);
 			
 			/*if($max>0){
 				wp_update_post(array(

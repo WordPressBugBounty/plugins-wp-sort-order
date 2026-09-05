@@ -2,8 +2,8 @@
 Contributors: fahadmahmood, invoicepress
 Tags: taxonomy order, user order, plugins order, post order
 Requires at least: 3.5.0
-Tested up to: 6.8
-Stable tag: 1.3.5
+Tested up to: 7.1
+Stable tag: 1.3.6
 Requires PHP: 7.0
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -103,6 +103,8 @@ add_action( 'pre_get_posts', 'my_filter' );
 `
 
 == Changelog ==
+= 1.3.6 =
+Security: Hardened plugin against SQL injection, XSS, CSRF, LFI, and privilege escalation vulnerabilities with comprehensive input validation, output escaping, and capability checks. [05/09/2026]
 = 1.3.4 =
 * Fix: When enabling the order of the posts, it does not allow me to create new ones and the only way to create new ones was duplicating a previous post. [Thanks to Carlos][30/10/2024]
 = 1.3.3 =
@@ -152,6 +154,8 @@ add_action( 'pre_get_posts', 'my_filter' );
 Initial Release
 
 == Upgrade Notice ==
+= 1.3.6 =
+Security hardening release: This update fixes multiple security vulnerabilities including SQL injection, XSS, CSRF, file inclusion, and privilege escalation issues. All users are strongly recommended to update immediately.
 = 1.3.4 =
 Fix: When enabling the order of the posts, it does not allow me to create new ones and the only way to create new ones was duplicating a previous post.
 = 1.3.3 =

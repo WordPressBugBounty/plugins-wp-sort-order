@@ -40,9 +40,18 @@
 		if(!empty($expected_terms)){
 			foreach($expected_terms as $eterms){
 				//pree($eterms);
-				$tquery = "SELECT t.taxonomy, t.term_id FROM $wpdb->term_taxonomy t, $wpdb->terms tr WHERE ".("tr.term_id='".$eterms->term_id."'")." AND tr.term_id=t.term_id LIMIT 1";	
+				
+				//$tquery = "SELECT t.taxonomy, t.term_id FROM $wpdb->term_taxonomy t, $wpdb->terms tr WHERE ".("tr.term_id='".$eterms->term_id."'")." AND tr.term_id=t.term_id LIMIT 1";	
 				//pree($tquery);
+				//$tax_term = $wpdb->get_row($tquery);
+				
+				$tquery = $wpdb->prepare(
+					"SELECT t.taxonomy, t.term_id FROM $wpdb->term_taxonomy t, $wpdb->terms tr WHERE tr.term_id = %d AND tr.term_id = t.term_id LIMIT 1",
+					$eterms->term_id
+				);
 				$tax_term = $wpdb->get_row($tquery);
+				
+				
 				$taxonomy = $tax_term->taxonomy;
 				$term_id = $tax_term->term_id;
 				$term_items = get_term_children($term_id, $taxonomy);
@@ -64,7 +73,7 @@
 						$term = get_term_by('id', $items, $taxonomy);
 						
 						
-						$squery = "
+						/*$squery = "
 										SELECT 							
 											um.user_id
 											
@@ -78,6 +87,15 @@
 											
 									";
 									
+						$teamMembers = $wpdb->get_results($squery);*/
+						
+						$squery = $wpdb->prepare(
+							"SELECT um.user_id
+							FROM $wpdb->usermeta um
+							WHERE um.meta_key = %s
+							ORDER BY CAST(um.meta_value AS unsigned) ASC",
+							'user_order_' . $items
+						);
 						$teamMembers = $wpdb->get_results($squery);
 						
 						
@@ -122,7 +140,7 @@
 	
 	if(!function_exists('pre')){
 		function pre($data){
-			if(isset($_GET['debug'])){
+			if(isset($_GET['debug']) && current_user_can('manage_options')){
 				pree($data);
 			}
 		}	 
@@ -130,6 +148,9 @@
 		
 	if(!function_exists('pree')){
 	function pree($data){
+				if ( ! current_user_can( 'manage_options' ) ) {
+					return;
+				}
 				echo '<pre>';
 				print_r($data);
 				echo '</pre>';	
@@ -200,10 +221,13 @@
 	function wpso_admin_init(){
 		//pree($_GET);
 		if(isset($_GET['get_keys'])){
+			if( ! current_user_can( 'manage_options' ) ) {
+				wp_die( esc_html__( 'Unauthorized access.', 'wpso-sort-order' ) );
+			}
 			if(isset($_GET['post']) && is_numeric($_GET['post'])){
 				pre(get_post($_GET['post']));
 				pre(get_post_meta($_GET['post']));
-				exit;
+				wp_die();
 			}
 		}
 	}

@@ -12,7 +12,7 @@ $term_order_exists = $wpdb->query( "DESCRIBE $wpdb->terms `term_order`" );
 
 <?php //screen_icon( 'plugins' ); ?>
 
-<h2><?php echo $wpso_data['Name'].' ('.$wpso_data['Version'].($wpso_pro?') '.__('Pro', 'wpso-sort-order').'':')'); ?> - <?php echo __('Settings','wpso-sort-order'); ?> <?php echo ($wpso_pro?'':'<a href="'.esc_url($wpso_premium_link).'" target="_blank" class="premium">'.__('Go Premium', 'wpso-sort-order').'</a>'); ?></h2>
+<h2><?php echo esc_html($wpso_data['Name']).' ('.esc_html($wpso_data['Version']).($wpso_pro?') '.__('Pro', 'wpso-sort-order').'':')'); ?> - <?php echo __('Settings','wpso-sort-order'); ?> <?php echo ($wpso_pro?'':'<a href="'.esc_url($wpso_premium_link).'" target="_blank" class="premium">'.__('Go Premium', 'wpso-sort-order').'</a>'); ?></h2>
 
     <h2 class="nav-tab-wrapper">
 
@@ -52,7 +52,7 @@ $term_order_exists = $wpdb->query( "DESCRIBE $wpdb->terms `term_order`" );
 ?>			            
 
                     <li>
-					<label><input type="checkbox" name="extras[]" value="<?php echo $page; ?>" <?php if ( isset( $wpso_extras ) && is_array( $wpso_extras ) ) { if ( in_array( $page, $wpso_extras ) ) { echo 'checked="checked"'; } } ?>>&nbsp;<?php echo $ptitle; ?></label>
+                    <label><input type="checkbox" name="extras[]" value="<?php echo esc_attr( $page ); ?>" <?php if ( isset( $wpso_extras ) && is_array( $wpso_extras ) ) { if ( in_array( $page, $wpso_extras ) ) { echo 'checked="checked"'; } } ?>>&nbsp;<?php echo esc_html( $ptitle ); ?></label>
                     </li>
 <?php
 		}
@@ -93,7 +93,10 @@ $term_order_exists = $wpdb->query( "DESCRIBE $wpdb->terms `term_order`" );
 				
 			?>
             					<li>
-					<label><input type="checkbox" name="objects[]" value="<?php echo $post_type->name; ?>" <?php if ( isset( $wpso_objects ) && is_array( $wpso_objects ) ) { if ( in_array( $post_type->name, $wpso_objects ) ) { echo 'checked="checked"'; } } ?>>&nbsp;<?php echo $post_type->label; ?></label>
+                    
+                    <label><input type="checkbox" name="objects[]" value="<?php echo esc_attr( $post_type->name ); ?>" <?php if ( isset( $wpso_objects ) && is_array( $wpso_objects ) ) { if ( in_array( $post_type->name, $wpso_objects ) ) { echo 'checked="checked"'; } } ?>>&nbsp;<?php echo esc_html( $post_type->label ); ?></label>
+                    
+                    
                     </li>			<?php
 					}
 				}
@@ -133,7 +136,7 @@ $term_order_exists = $wpdb->query( "DESCRIBE $wpdb->terms `term_order`" );
 					foreach($tax_array as $taxonomy){
 				
 			?>
-            					<li><label><input type="checkbox" name="tags[]" value="<?php echo $taxonomy->name; ?>" <?php if ( isset( $wpso_tags ) && is_array( $wpso_tags ) ) { if ( in_array( $taxonomy->name, $wpso_tags ) ) { echo 'checked="checked"'; } } ?>>&nbsp;<?php echo $taxonomy->label ?></label></li>
+                                <li><label><input type="checkbox" name="tags[]" value="<?php echo esc_attr( $taxonomy->name ); ?>" <?php if ( isset( $wpso_tags ) && is_array( $wpso_tags ) ) { if ( in_array( $taxonomy->name, $wpso_tags ) ) { echo 'checked="checked"'; } } ?>>&nbsp;<?php echo esc_html( $taxonomy->label ); ?></label></li>
 			<?php
 					}
 				}
@@ -230,7 +233,7 @@ $term_order_exists = $wpdb->query( "DESCRIBE $wpdb->terms `term_order`" );
                                             foreach($tax_array as $taxonomy){
 
                                                 ?>
-                                                <li><label><input type="checkbox" name="tags[]" value="<?php echo $taxonomy->name; ?>" <?php if ( isset( $wpso_tags ) && is_array( $wpso_tags ) ) { if ( in_array( $taxonomy->name, $wpso_tags ) ) { echo 'checked="checked"'; } } ?>>&nbsp;<?php echo $taxonomy->label ?></label></li>
+                                                <li><label><input type="checkbox" name="tags[]" value="<?php echo esc_attr( $taxonomy->name ); ?>" <?php if ( isset( $wpso_tags ) && is_array( $wpso_tags ) ) { if ( in_array( $taxonomy->name, $wpso_tags ) ) { echo 'checked="checked"'; } } ?>>&nbsp;<?php echo esc_html( $taxonomy->label ); ?></label></li>
                                                 <?php
                                             }
                                         }
@@ -298,7 +301,7 @@ jQuery(document).ready(function($){
 <?php if (isset($_GET['t']) || isset($_POST['wpso_tn'])):
 
 
-	$wpso_tn = isset($_POST['wpso_tn']) ? esc_attr($_POST['wpso_tn']) : esc_attr($_GET['t']);
+	$wpso_tn = isset($_POST['wpso_tn']) ? intval($_POST['wpso_tn']) : intval($_GET['t']);
 
 	?>
 		setTimeout(function(){

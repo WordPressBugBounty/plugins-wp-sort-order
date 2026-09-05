@@ -3,7 +3,7 @@
 Plugin Name: WP Sort Order
 Plugin URI: http://androidbubble.com/blog/wordpress/plugins/wp-sort-order
 Description: Order plugins, terms (Users, Posts, Pages, Custom Post Types and Custom Taxonomies) using a Drag and Drop with jQuery ui Sortable.
-Version: 1.3.5
+Version: 1.3.6
 Author: Fahad Mahmood 
 Author URI: http://www.androidbubble.com
 Text Domain: wpso-sort-order
@@ -15,7 +15,8 @@ This WordPress Plugin is free software: you can redistribute it and/or modify it
 */ 
 
 	require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-	include('inc/functions.php');
+	include(plugin_dir_path(__FILE__) . 'inc/functions.php');
+
 	
 	global $wpso_data, $wpso_pro, $wpso_premium_link, $wpso_premium, $premium_click, $wpso_allowed_pages, $premium_tags_list;
 	$wpso_allowed_pages = array('plugins.php'=>'Plugins');
@@ -44,9 +45,9 @@ This WordPress Plugin is free software: you can redistribute it and/or modify it
 	register_activation_hook( __FILE__, 'wpso_activate' );
 	
 	if($wpso_pro)
-	include($wpso_premium);
+	include(plugin_dir_path(__FILE__) . 'pro/wpso_extended.php');
 	
 	//echo $wpso_premium;
 	
-	include('inc/hooks.php');
+	include(plugin_dir_path(__FILE__) . 'inc/hooks.php');
 	
