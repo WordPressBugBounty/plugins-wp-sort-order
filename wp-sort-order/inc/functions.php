@@ -1,233 +1,201 @@
-<?php if ( ! defined( 'ABSPATH' ) ) exit; 
-		
-	function sanitize_wpso_data( $input ) {
-		if(is_array($input)){		
-			$new_input = array();	
-			foreach ( $input as $key => $val ) {
-				$new_input[ $key ] = (is_array($val)?sanitize_wpso_data($val):sanitize_text_field( $val ));
-			}			
-		}else{
-			$new_input = sanitize_text_field($input);			
-			if(stripos($new_input, '@') && is_email($new_input)){
-				$new_input = sanitize_email($new_input);
-			}
-			if(stripos($new_input, 'http') || wp_http_validate_url($new_input)){
-				$new_input = sanitize_url($new_input);
-			}			
-		}	
-		return $new_input;
-	}	
-	function wp_wpso_enqueue_scripts() {
-		
-		global $wpdb;
-		
-		wp_enqueue_script(
-			'wpso-front-scripts',
-			plugins_url('js/front-scripts.js', dirname(__FILE__)),
-			array('jquery'),
-			date('Ymhi')
-		);
-		
-		$expected_terms = $wpdb->get_results("SELECT t.term_id FROM ".$wpdb->prefix."term_taxonomy t WHERE t.taxonomy='usercategories'");		
-		
-		$wp_wpso_array = array(
-								'ajaxurl' => admin_url( 'admin-ajax.php' ),	
-								'nonce'=> wp_create_nonce('wpso_nonce_ensured'),
-						);
-						
-		$expected_items = array();				
-						
-		if(!empty($expected_terms)){
-			foreach($expected_terms as $eterms){
-				//pree($eterms);
-				
-				//$tquery = "SELECT t.taxonomy, t.term_id FROM $wpdb->term_taxonomy t, $wpdb->terms tr WHERE ".("tr.term_id='".$eterms->term_id."'")." AND tr.term_id=t.term_id LIMIT 1";	
-				//pree($tquery);
-				//$tax_term = $wpdb->get_row($tquery);
-				
-				$tquery = $wpdb->prepare(
-					"SELECT t.taxonomy, t.term_id FROM $wpdb->term_taxonomy t, $wpdb->terms tr WHERE tr.term_id = %d AND tr.term_id = t.term_id LIMIT 1",
-					$eterms->term_id
-				);
-				$tax_term = $wpdb->get_row($tquery);
-				
-				
-				$taxonomy = $tax_term->taxonomy;
-				$term_id = $tax_term->term_id;
-				$term_items = get_term_children($term_id, $taxonomy);
-				
-				if(empty($term_items)){
-					$term_items_direct = get_objects_in_term( $term_id, $taxonomy); //07-10-2018
-					if(!empty($term_items_direct)){
-						$term_items = array($term_id);
-					}
-				}
-				
-				if(!empty($term_items)){
-					
-					if($items>0)
-					$expected_items[$items] = array();
-					
-					foreach($term_items as $items){
-						//pree($items);
-						$term = get_term_by('id', $items, $taxonomy);
-						
-						
-						/*$squery = "
-										SELECT 							
-											um.user_id
-											
-										FROM 
-											$wpdb->usermeta um
-										WHERE										
-											um.meta_key=CONCAT('user_order_', $items)
-										ORDER BY
-											CAST(um.meta_value AS unsigned)
-										ASC
-											
-									";
-									
-						$teamMembers = $wpdb->get_results($squery);*/
-						
-						$squery = $wpdb->prepare(
-							"SELECT um.user_id
-							FROM $wpdb->usermeta um
-							WHERE um.meta_key = %s
-							ORDER BY CAST(um.meta_value AS unsigned) ASC",
-							'user_order_' . $items
-						);
-						$teamMembers = $wpdb->get_results($squery);
-						
-						
-						if(!empty($teamMembers)){							
-							foreach ( $teamMembers as $teamMember ){
-									
-								//$teamMember_info = get_userdata($teamMember->user_id);	
-								//pree(get_author_posts_url($teamMember->user_id));
-								$expected_items[$items][] = array('user_id'=>$teamMember->user_id, 'user_link'=>get_author_posts_url($teamMember->user_id));
-							} 
-							
-						}
-					}
-				}
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
-			}
-		}		
-		
-		$wp_wpso_array['user_items'] = $expected_items;
-		
-		wp_localize_script( 'wpso-front-scripts', 'wpso', $wp_wpso_array );
-	}
-	
-	add_action( 'wp_enqueue_scripts', 'wp_wpso_enqueue_scripts', 99 );	
-	
-	
-	function wp_wpso_admin_enqueue_scripts() {
-		
-		global $wpdb;
-		
-		if(isset($_GET['page']) && $_GET['page']=='wpso-settings'){
-			
-			wp_enqueue_script( 'wpso-fontawesome', plugin_dir_url( dirname(__FILE__) ) . 'js/fontawesome.min.js' );
-			wp_enqueue_style( 'wpso-fontawesome', plugins_url('css/fontawesome.min.css', dirname(__FILE__)), array());	
-			wp_enqueue_script( 'wpso-bootstrap', plugin_dir_url( dirname(__FILE__) ) . 'js/bootstrap.min.js' );
-			wp_enqueue_style( 'wpso-bootstrap', plugins_url('css/bootstrap.min.css', dirname(__FILE__)), array());				
-		}
-		
-	}
-			
-	add_action( 'admin_enqueue_scripts', 'wp_wpso_admin_enqueue_scripts', 99 );		
-	
-	if(!function_exists('pre')){
-		function pre($data){
-			if(isset($_GET['debug']) && current_user_can('manage_options')){
-				pree($data);
-			}
-		}	 
-	} 
-		
-	if(!function_exists('pree')){
-	function pree($data){
-				if ( ! current_user_can( 'manage_options' ) ) {
-					return;
-				}
-				echo '<pre>';
-				print_r($data);
-				echo '</pre>';	
-		
-		}	 
-	} 	
-
-	if ( ! function_exists("wpso_plugin_links"))
-	{
-		function wpso_plugin_links($links) { 
-			global $wpso_premium_link, $wpso_pro;
-			
-			$settings_link = '<a href="options-general.php?page=wpso-settings">'.__('Settings', 'wpso-sort-order').'</a>';
-			
-			if($wpso_pro){
-				array_unshift($links, $settings_link); 
-			}else{
-				 
-				$wpso_premium_link = '<a href="'.esc_url($wpso_premium_link).'" title="'.__('Go Premium', 'wpso-sort-order').'" target=_blank>'.__('Go Premium', 'wpso-sort-order').'</a>'; 
-				array_unshift($links, $settings_link, $wpso_premium_link); 
-			
-			}
-			
-			
-			return $links; 
-		}
-	}
-	
 /**
-* Uninstall hook
-*/
-	
-	register_uninstall_hook( __FILE__, 'wpso_uninstall' );
-	
-	function wpso_uninstall()
-	{
-		global $wpdb;
-		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
-			$curr_blog = $wpdb->blogid;
-			$blogids = $wpdb->get_col( "SELECT blog_id FROM $wpdb->blogs" );
-			foreach( $blogids as $blog_id ) {
-				switch_to_blog( $blog_id );
-				wpso_uninstall_db();
+ * Is the optional /pro add-on present and loaded?
+ *
+ * @return bool
+ */
+function wpso_is_pro() {
+	return ! empty( $GLOBALS['wpso_pro'] );
+}
+
+/**
+ * Recursively sanitize plugin data.
+ *
+ * @param mixed $input Raw value.
+ * @return mixed
+ */
+function sanitize_wpso_data( $input ) {
+	if ( is_array( $input ) ) {
+		$new_input = array();
+		foreach ( $input as $key => $val ) {
+			$key               = is_int( $key ) ? $key : sanitize_text_field( (string) $key );
+			$new_input[ $key ] = is_array( $val ) ? sanitize_wpso_data( $val ) : sanitize_text_field( (string) $val );
+		}
+		return $new_input;
+	}
+
+	$new_input = sanitize_text_field( (string) $input );
+	if ( false !== stripos( $new_input, '@' ) && is_email( $new_input ) ) {
+		$new_input = sanitize_email( $new_input );
+	}
+	if ( 0 === stripos( $new_input, 'http' ) && wp_http_validate_url( $new_input ) ) {
+		$new_input = sanitize_url( $new_input );
+	}
+	return $new_input;
+}
+
+/**
+ * Who may drag & drop?  Administrators by default; the pro add-on may extend this
+ * (never to anything the user could not already edit - every handler also checks
+ * per-object capabilities).
+ *
+ * @return bool
+ */
+function wpso_user_can_sort() {
+	return (bool) apply_filters( 'wpso_user_can_sort', current_user_can( 'manage_options' ) );
+}
+
+/**
+ * Read a sanitized value from $_GET.
+ *
+ * @param string $key     Query var.
+ * @param string $default Default.
+ * @return string
+ */
+function wpso_get( $key, $default = '' ) {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only routing, no state change.
+	return isset( $_GET[ $key ] ) && ! is_array( $_GET[ $key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) : $default;
+}
+
+/**
+ * Current admin request path (sanitized).
+ *
+ * @return string
+ */
+function wpso_request_uri() {
+	return isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+}
+
+function wp_wpso_enqueue_scripts() {
+	global $wpdb;
+
+	wp_enqueue_script(
+		'wpso-front-scripts',
+		plugins_url( 'js/front-scripts.js', WPSO_FILE ),
+		array( 'jquery' ),
+		WPSO_VERSION,
+		true
+	);
+
+	$wp_wpso_array = array(
+		'ajaxurl' => admin_url( 'admin-ajax.php' ),
+	);
+
+	$expected_items = array();
+
+	// "User Categories" is a premium taxonomy - nothing to look up without it.
+	if ( wpso_is_pro() && taxonomy_exists( 'usercategories' ) ) {
+		$expected_terms = $wpdb->get_results(
+			$wpdb->prepare( "SELECT t.term_id FROM {$wpdb->term_taxonomy} t WHERE t.taxonomy = %s", 'usercategories' )
+		);
+
+		foreach ( (array) $expected_terms as $eterms ) {
+			$tax_term = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT t.taxonomy, t.term_id FROM {$wpdb->term_taxonomy} t, {$wpdb->terms} tr WHERE tr.term_id = %d AND tr.term_id = t.term_id LIMIT 1",
+					$eterms->term_id
+				)
+			);
+			if ( ! $tax_term ) {
+				continue;
 			}
-			switch_to_blog( $curr_blog );
+
+			$taxonomy   = $tax_term->taxonomy;
+			$term_id    = (int) $tax_term->term_id;
+			$term_items = get_term_children( $term_id, $taxonomy );
+
+			if ( empty( $term_items ) || is_wp_error( $term_items ) ) {
+				$term_items_direct = get_objects_in_term( $term_id, $taxonomy );
+				$term_items        = ( ! empty( $term_items_direct ) && ! is_wp_error( $term_items_direct ) ) ? array( $term_id ) : array();
+			}
+
+			foreach ( $term_items as $items ) {
+				$items        = (int) $items;
+				$team_members = $wpdb->get_results(
+					$wpdb->prepare(
+						"SELECT um.user_id FROM {$wpdb->usermeta} um WHERE um.meta_key = %s ORDER BY CAST(um.meta_value AS unsigned) ASC",
+						'user_order_' . $items
+					)
+				);
+
+				foreach ( (array) $team_members as $team_member ) {
+					$expected_items[ $items ][] = array(
+						'user_id'   => (int) $team_member->user_id,
+						'user_link' => esc_url_raw( get_author_posts_url( $team_member->user_id ) ),
+					);
+				}
+			}
+		}
+	}
+
+	$wp_wpso_array['user_items'] = $expected_items;
+
+	wp_localize_script( 'wpso-front-scripts', 'wpso', $wp_wpso_array );
+}
+add_action( 'wp_enqueue_scripts', 'wp_wpso_enqueue_scripts', 99 );
+
+function wp_wpso_admin_enqueue_scripts() {
+	if ( 'wpso-settings' === wpso_get( 'page' ) && current_user_can( 'manage_options' ) ) {
+		wp_enqueue_script( 'wpso-fontawesome', WPSO_URL . '/js/fontawesome.min.js', array(), WPSO_VERSION, true );
+		wp_enqueue_style( 'wpso-fontawesome', WPSO_URL . '/css/fontawesome.min.css', array(), WPSO_VERSION );
+		wp_enqueue_script( 'wpso-bootstrap', WPSO_URL . '/js/bootstrap.min.js', array( 'jquery' ), WPSO_VERSION, true );
+		wp_enqueue_style( 'wpso-bootstrap', WPSO_URL . '/css/bootstrap.min.css', array(), WPSO_VERSION );
+	}
+}
+add_action( 'admin_enqueue_scripts', 'wp_wpso_admin_enqueue_scripts', 99 );
+
+if ( ! function_exists( 'pre' ) ) {
+	function pre( $data ) {
+		if ( isset( $_GET['debug'] ) && current_user_can( 'manage_options' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			pree( $data );
+		}
+	}
+}
+
+if ( ! function_exists( 'pree' ) ) {
+	function pree( $data ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		echo '<pre>' . esc_html( print_r( $data, true ) ) . '</pre>'; // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+	}
+}
+
+if ( ! function_exists( 'wpso_plugin_links' ) ) {
+	function wpso_plugin_links( $links ) {
+		global $wpso_premium_link;
+
+		$settings_link = '<a href="' . esc_url( admin_url( 'options-general.php?page=wpso-settings' ) ) . '">' . esc_html__( 'Settings', 'wpso-sort-order' ) . '</a>';
+
+		if ( wpso_is_pro() ) {
+			array_unshift( $links, $settings_link );
 		} else {
-			wpso_uninstall_db();
+			$go_premium = '<a href="' . esc_url( $wpso_premium_link ) . '" title="' . esc_attr__( 'Go Premium', 'wpso-sort-order' ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Go Premium', 'wpso-sort-order' ) . '</a>';
+			array_unshift( $links, $settings_link, $go_premium );
+		}
+
+		return $links;
+	}
+}
+
+/**
+ * Debug helper (administrators only): ?get_keys&post=ID dumps a post and its meta.
+ */
+function wpso_admin_init() {
+	if ( isset( $_GET['get_keys'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Unauthorized access.', 'wpso-sort-order' ) );
+		}
+		$post_id = isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( $post_id ) {
+			pre( get_post( $post_id ) );
+			pre( get_post_meta( $post_id ) );
+			wp_die();
 		}
 	}
-	function wpso_uninstall_db()
-	{
-		global $wpdb;
-		$result = $wpdb->query( "DESCRIBE $wpdb->terms `term_order`" );
-		if ( $result ){
-			$query = "ALTER TABLE $wpdb->terms DROP `term_order`";
-			$result = $wpdb->query( $query );
-		}
-		
-		$result = $wpdb->query( "DESCRIBE $wpdb->users `user_order`" );
-		if ( $result ){
-			$query = "ALTER TABLE $wpdb->users DROP `user_order`";
-			$result = $wpdb->query( $query );
-		}
-	
-		delete_option( 'wpso_activation' );	
-	}
-	add_action('admin_init', 'wpso_admin_init');
-	function wpso_admin_init(){
-		//pree($_GET);
-		if(isset($_GET['get_keys'])){
-			if( ! current_user_can( 'manage_options' ) ) {
-				wp_die( esc_html__( 'Unauthorized access.', 'wpso-sort-order' ) );
-			}
-			if(isset($_GET['post']) && is_numeric($_GET['post'])){
-				pre(get_post($_GET['post']));
-				pre(get_post_meta($_GET['post']));
-				wp_die();
-			}
-		}
-	}
+}
+add_action( 'admin_init', 'wpso_admin_init' );

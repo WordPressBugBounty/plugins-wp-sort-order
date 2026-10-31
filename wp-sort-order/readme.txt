@@ -1,10 +1,10 @@
 === WP Sort Order ===
 Contributors: fahadmahmood, invoicepress
 Tags: taxonomy order, user order, plugins order, post order
-Requires at least: 3.5.0
+Requires at least: 6.0
 Tested up to: 7.1
-Stable tag: 1.3.6
-Requires PHP: 7.0
+Stable tag: 1.3.7
+Requires PHP: 7.4
 License: GPL2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ Order terms (Users, Posts, Pages, Custom Post Types and Custom Taxonomies) using
 
 * Project URI: <http://androidbubble.com/blog/wordpress/plugins/wp-sort-order>
 
-* License: GPL 3. See License below for copyright jots and titles.
+* License: GPLv2 or later. See License below.
 
 
 Order terms (Users, Posts, Pages, Custom Post Types and Custom Taxonomies) using a Drag and Drop with jQuery ui Sortable.
@@ -103,6 +103,14 @@ add_action( 'pre_get_posts', 'my_filter' );
 `
 
 == Changelog ==
+= 1.3.7 =
+* Tested up to WordPress 7.1. Requires WordPress 6.0 and PHP 7.4 or newer.
+* Security: every SQL query is prepared; capability + nonce checks on all settings and AJAX actions; per-item permission checks (edit_post / edit_term / edit_user); whitelisted settings input; safe redirects; escaped output; no nonce exposed on the front end.
+* Fix: settings saved from the General tab no longer drop Premium taxonomies.
+* Fix: PHP 8.x notices and a fatal error risk on front-end user queries.
+* Fix: plugin translations now load (text domain wpso-sort-order); uninstall cleanup moved to uninstall.php.
+* Assets are versioned with the plugin version instead of changing every minute (better caching).
+* New: optional "pro" add-on folder. If /pro exists, premium features switch on automatically (history and undo, backup, quick reset, role access, order column, shortcodes, REST API). Without it the free plugin works exactly as before.
 = 1.3.6 =
 Security: Hardened plugin against SQL injection, XSS, CSRF, LFI, and privilege escalation vulnerabilities with comprehensive input validation, output escaping, and capability checks. [05/09/2026]
 = 1.3.4 =
@@ -154,6 +162,8 @@ Security: Hardened plugin against SQL injection, XSS, CSRF, LFI, and privilege e
 Initial Release
 
 == Upgrade Notice ==
+= 1.3.7 =
+Security hardening, WordPress 7.1 compatibility and fixes. Requires WordPress 6.0+ and PHP 7.4+.
 = 1.3.6 =
 Security hardening release: This update fixes multiple security vulnerabilities including SQL injection, XSS, CSRF, file inclusion, and privilege escalation issues. All users are strongly recommended to update immediately.
 = 1.3.4 =
@@ -202,6 +212,9 @@ Plugins can be sorted as well.
 A few improvements related to WordPress 4.6.
 = 1.1.0 =
 A few improvements related to WordPress 4.5.0.
+
+== External services ==
+The Help tab of the settings page embeds an optional video from YouTube (youtube-nocookie.com). It loads only when an administrator opens that tab. See https://policies.google.com/privacy.
 
 == License ==
 This WordPress Plugin is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or any later version. This free software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with this software. If not, see http://www.gnu.org/licenses/gpl-2.0.html.

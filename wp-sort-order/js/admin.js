@@ -101,7 +101,7 @@
 
 		});		
 		$('small.premium').on('click', function(){
-			window.open($('a.premium').attr('href'));
+			window.open($('a.premium').attr('href'), '_blank', 'noopener,noreferrer');
 			
 		});
 		
